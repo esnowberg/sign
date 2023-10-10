@@ -1,0 +1,53 @@
+From d7235fea5235347286ec4762f63bcddcb5682263 Mon Sep 17 00:00:00 2001
+From: Eric Snowberg <eric.snowberg@oracle.com>
+Date: Tue, 10 Oct 2023 16:04:07 -0400
+Subject: [PATCH] Hack to work around efikeygen bug in OL8
+
+Signed-off-by: Eric Snowberg <eric.snowberg@oracle.com>
+---
+ sign | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/sign b/sign
+index 5f16500..e5545bd 100755
+--- a/sign
++++ b/sign
+@@ -37,8 +37,10 @@ init-setup() {
+ 		exit 1
+ 	fi
+ 
++	# remove the -k below once efikeygen is fixed in ol8
+ 	efikeygen -d $NSSDIR -C -n $X509_CA_NICKNAME -S  \
+-			--common-name="""$X509_CA_COMMON_NAME"""
++			--common-name="""$X509_CA_COMMON_NAME""" \
++			-k
+ 
+ 	efikeygen -d $NSSDIR -n $X509_KERNEL_NICKNAME --signer $X509_CA_NICKNAME -k \
+ 			--common-name="""$X509_KERNEL_COMMON_NAME"""
+@@ -49,14 +51,20 @@ init-setup() {
+ 	efikeygen -d $NSSDIR -n $X509_MODULE_NICKNAME --signer $X509_CA_NICKNAME -m \
+ 			--common-name="""$X509_MODULE_COMMON_NAME"""
+ 
++	# remove the -k below once efikeygen is fixed in ol8
+ 	efikeygen -d $NSSDIR -C -n $X509_DB_NICKNAME -S \
+-			--common-name="""$X509_DB_COMMON_NAME"""
++			--common-name="""$X509_DB_COMMON_NAME""" \
++			-k
+ 
++	# remove the -k below once efikeygen is fixed in ol8
+ 	efikeygen -d $NSSDIR -C -n $X509_KEK_NICKNAME -S \
+-			--common-name="""$X509_KEK_COMMON_NAME"""
++			--common-name="""$X509_KEK_COMMON_NAME""" \
++			-k
+ 
++	# remove the -k below once efikeygen is fixed in ol8
+ 	efikeygen -d $NSSDIR -C -n $X509_PK_NICKNAME -S \
+-			--common-name="""$X509_PK_COMMON_NAME"""
++			--common-name="""$X509_PK_COMMON_NAME""" \
++			-k
+ 
+ 	certutil -L -d $NSSDIR -n $X509_KERNEL_NICKNAME -o $MOK_KERNEL_CERT -r
+ 	certutil -L -d $NSSDIR -n $X509_MODULE_NICKNAME -o $MOK_MODULE_CERT -r
+-- 
+2.39.3
+

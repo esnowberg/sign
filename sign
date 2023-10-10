@@ -1,0 +1,199 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-2.0
+#
+set -euo pipefail
+
+X509_CA_NICKNAME="myca"
+X509_KERNEL_NICKNAME="kernel"
+X509_MODULE_NICKNAME="module"
+X509_IMA_NICKNAME="ima"
+X509_DB_NICKNAME="db"
+X509_KEK_NICKNAME="kek"
+X509_PK_NICKNAME="pk"
+SIGN_CONF="/etc/sign/sign.conf"
+SIGN_CONF_LOCAL="/etc/sign/local.conf"
+
+if [[ -s $SIGN_CONF ]]; then
+	. "$SIGN_CONF"
+else
+	echo "Unable to find sign config file" 1>&2
+	exit 1
+fi
+
+if [[ -s $SIGN_CONF_LOCAL ]]; then
+	. "$SIGN_CONF_LOCAL"
+fi
+
+init_setup_usage='
+  init-setup			Initialize and enroll keys (call once)'
+usage+=$init_setup_usage
+commands+="init-setup"
+
+init-setup() {
+
+	if [ -f "$MOK_CA_CERT" ]; then
+		echo "Already initialized"
+		exit 1
+	fi
+
+	efikeygen -d $NSSDIR -C -n $X509_CA_NICKNAME -S  \
+			--common-name="""$X509_CA_COMMON_NAME"""
+
+	efikeygen -d $NSSDIR -n $X509_KERNEL_NICKNAME --signer $X509_CA_NICKNAME -k \
+			--common-name="""$X509_KERNEL_COMMON_NAME"""
+
+	efikeygen -d $NSSDIR -n $X509_IMA_NICKNAME --signer $X509_CA_NICKNAME -k \
+			--common-name="""$X509_IMA_COMMON_NAME"""
+
+	efikeygen -d $NSSDIR -n $X509_MODULE_NICKNAME --signer $X509_CA_NICKNAME -m \
+			--common-name="""$X509_MODULE_COMMON_NAME"""
+
+	efikeygen -d $NSSDIR -C -n $X509_DB_NICKNAME -S \
+			--common-name="""$X509_DB_COMMON_NAME"""
+
+	efikeygen -d $NSSDIR -C -n $X509_KEK_NICKNAME -S \
+			--common-name="""$X509_KEK_COMMON_NAME"""
+
+	efikeygen -d $NSSDIR -C -n $X509_PK_NICKNAME -S \
+			--common-name="""$X509_PK_COMMON_NAME"""
+
+	certutil -L -d $NSSDIR -n $X509_KERNEL_NICKNAME -o $MOK_KERNEL_CERT -r
+	certutil -L -d $NSSDIR -n $X509_MODULE_NICKNAME -o $MOK_MODULE_CERT -r
+	certutil -L -d $NSSDIR -n $X509_IMA_NICKNAME -o $IMA_CERT -r
+	certutil -L -d $NSSDIR -n $X509_DB_NICKNAME -o $DB_CERT -r
+	certutil -L -d $NSSDIR -n $X509_KEK_NICKNAME -o $KEK_CERT -r
+	certutil -L -d $NSSDIR -n $X509_PK_NICKNAME -o $PK_CERT -r
+	certutil -L -d $NSSDIR -n $X509_CA_NICKNAME -o $MOK_CA_CERT -r
+	certutil -L -d $NSSDIR_OL -n """$X509_TEST_NICKNAME""" -o $TEST_CERT -r
+
+	mokutil --import $MOK_MODULE_CERT $MOK_KERNEL_CERT $MOK_CA_CERT $TEST_CERT --root-pw
+	echo "****************************************************************************"
+	echo "* REBOOT MACHINE AND ENROLL NEW MOK KEYS (use root password in mokmanager) *"
+	echo "****************************************************************************"
+}
+
+init-check() {
+	if [ ! -f "$MOK_CA_CERT" ]; then
+		echo "Uninitialized call init-setup first"
+		exit -1
+	fi
+}
+
+destroy_setup_usage='
+  destroy-setup			Destory setup and unenroll keys'
+usage+=$destroy_setup_usage
+commands+="|destroy-setup"
+
+destroy-setup() {
+	init-check
+	certutil -d $NSSDIR -D -n $X509_CA_NICKNAME
+	certutil -d $NSSDIR -D -n $X509_KERNEL_NICKNAME
+	certutil -d $NSSDIR -D -n $X509_MODULE_NICKNAME
+	certutil -d $NSSDIR -D -n $X509_IMA_NICKNAME
+	certutil -d $NSSDIR -D -n $X509_DB_NICKNAME
+	certutil -d $NSSDIR -D -n $X509_KEK_NICKNAME
+	certutil -d $NSSDIR -D -n $X509_PK_NICKNAME
+	mokutil --delete $MOK_CA_CERT $MOK_KERNEL_CERT $MOK_MODULE_CERT $TEST_CERT --root-pw
+	rm -f $MOK_KERNEL_CERT
+	rm -f $MOK_MODULE_CERT
+	rm -f $IMA_CERT
+	rm -f $DB_CERT
+	rm -f $KEK_CERT
+	rm -f $PK_CERT
+	rm -f $MOK_CA_CERT
+	rm -f $TEST_CERT
+	echo "***************************************************************************"
+	echo "* REBOOT MACHINE NOW TO DELETE MOK KEYS (use root password in mokmanager) *"
+	echo "***************************************************************************"
+}
+
+setuppriv() {
+	TMPP12=$(mktemp -t XXXXXXXXXX.p12)
+	TMPPRIV=$(mktemp -t XXXXXXXXXX.priv)
+	trap 'rm -f -- "$TMPP12" "$TMPPRIV"' EXIT
+}
+
+destroypriv(){
+	rm -f -- "$TMPPRIV" "$TMPP12"
+	trap - EXIT
+}
+
+ima_usage='
+  ima <file name>		Sign the file with the ima key'
+usage+=$ima_usage
+commands+="|ima"
+
+ima() {
+	init-check
+	setuppriv
+	pk12util -o $TMPP12 -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
+	openssl pkcs12 -in "$TMPP12" -out "$TMPPRIV" -nocerts -nodes -passin pass:12345678
+	evmctl ima_sign --key "$TMPPRIV" $1
+	destroypriv
+}
+
+module_usage='
+  module <module name>		Sign the module with the module key'
+usage+=$module_usage
+commands+="|module"
+
+module() {
+	init-check
+	setuppriv
+	pk12util -o $TMPP12 -n $X509_MODULE_NICKNAME -d $NSSDIR -W "12345678"
+	openssl pkcs12 -in "$TMPP12" -out "$TMPPRIV" -nocerts -nodes -passin pass:12345678
+	SIGNFILE=$(echo $SIGN_FILE | cut -f1 -d ' ')
+	$($SIGNFILE sha256 "$TMPPRIV" "$MOK_MODULE_CERT" $1)
+	destroypriv
+}
+
+kernel_usage='
+  kernel <kernal name>		Sign the kernel with the kernel key '
+usage+=$kernel_usage
+commands+="|kernel"
+
+kernel() {
+	init-check
+	TMPKERNEL=$(mktemp -t XXXXXXXX)
+	trap 'rm -f -- "$TMPKERNEL"' EXIT
+	pesign --force -i $1 -o $TMPKERNEL -c $X509_KERNEL_NICKNAME -s
+	mv $TMPKERNEL $1
+	trap - EXIT
+}
+
+bootloader_usage='
+  bootloader <bootloader name>	Sign the bootloader with the db key '
+usage+=$bootloader_usage
+commands+="|bootloader"
+
+bootloader() {
+	init-check
+	TMPBOOTLOADER=$(mktemp -t XXXXXXXX)
+	trap 'rm -f -- "$TMPBOOTLOADER"' EXIT
+	pesign --force -i $1 -o $TMPBOOTLOADER -c $X509_DB_NICKNAME -s
+	mv $TMPBOOTLOADER $1
+	trap - EXIT
+}
+
+if [ $# -lt 1 ]; then
+	echo "Usage $0 [$commands]"
+	exit 0
+fi
+
+command=$1 ; shift
+
+case "$command" in
+	-h|--help)
+		echo "sign - Signing tools for Developers"
+		echo "$usage"
+		exit 0
+		;;
+	init-setup|destroy-setup|module|kernel|ima|bootloader)
+		$command "$@"
+		;;
+	*)
+		echo "$0: subcommand $command unknown"
+		exit 255
+		;;
+esac
