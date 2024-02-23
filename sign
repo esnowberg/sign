@@ -30,6 +30,33 @@ init_setup_usage='
 usage+=$init_setup_usage
 commands+="init-setup"
 
+init-ima() {
+
+	TMPCSR=$(mktemp -t XXXXXXXX.pem)
+	TMPCA=$(mktemp -t XXXXXXXX)
+	TMPCAPEM=$(mktemp -t XXXXXXXX.pem)
+
+	trap 'rm -f -- "$TMPCSR" "$TMPCA" "$TMPCAPEM"' EXIT
+
+	openssl req -new  -nodes -utf8 -sha512 -out $TMPCSR -keyout $IMA_PRIV_KEY \
+		-subj '/'"$X509_IMA_COMMON_NAME" -config <( \
+		printf "[cert]\n%s\n[req]\ndistinguished_name =  \
+		cert\ndefault_bits = 4096\n" "$X509_IMA_COMMON_NAME")
+
+	pk12util -o $TMPCA -n $X509_CA_NICKNAME -d $NSSDIR -W "12345678"
+	openssl pkcs12 -in $TMPCA -out $TMPCAPEM -nodes -passin pass:12345678
+
+	openssl x509 -req -in $TMPCSR -days 3650 -CA $TMPCAPEM -CAkey $TMPCAPEM \
+		-CAcreateserial -outform DER -out $IMA_CERT  -extensions EXT \
+		-extfile <( \
+		printf "[EXT]\nkeyUsage=digitalSignature\n\
+		extendedKeyUsage=codeSigning\nsubjectKeyIdentifier=hash\n\
+		authorityKeyIdentifier=keyid:always,issuer")
+
+	rm -f -- "$TMPCSR" "$TMPCA" "$TMPCAPEM"
+	trap - EXIT
+}
+
 init-setup() {
 
 	if [ -f "$MOK_CA_CERT" ]; then
@@ -66,6 +93,8 @@ init-setup() {
 	certutil -L -d $NSSDIR -n $X509_PK_NICKNAME -o $PK_CERT -r
 	certutil -L -d $NSSDIR -n $X509_CA_NICKNAME -o $MOK_CA_CERT -r
 	certutil -L -d $NSSDIR_OL -n """$X509_TEST_NICKNAME""" -o $TEST_CERT -r
+
+	init-ima
 
 	mokutil --import $MOK_MODULE_CERT $MOK_KERNEL_CERT $MOK_CA_CERT $TEST_CERT --root-pw
 	echo "****************************************************************************"
@@ -126,11 +155,7 @@ commands+="|ima"
 
 ima() {
 	init-check
-	setuppriv
-	pk12util -o $TMPP12 -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
-	openssl pkcs12 -in "$TMPP12" -out "$TMPPRIV" -nocerts -nodes -passin pass:12345678
-	evmctl ima_sign --key "$TMPPRIV" $1
-	destroypriv
+	evmctl ima_sign --key "$IMA_PRIV_KEY" $1
 }
 
 module_usage='
