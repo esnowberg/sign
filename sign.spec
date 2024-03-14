@@ -20,6 +20,7 @@ Requires:	coreutils
 Requires:	kernel-headers
 Requires:	ima-evm-utils
 Requires:	openssl
+Requires:	kernel-devel
 
 %description
 Signing Tools for Developers.
@@ -43,6 +44,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Fri Feb 23 2024 Eric Snowberg <eric.snowberg@oracle.com>
+- Add kernel-devel as a prereq
 - IMA fix to be compatible with newer upstream kernels
 * Thu Oct 5 2023 Eric Snowberg <eric.snowberg@oracle.com>
 - Initial checkin
