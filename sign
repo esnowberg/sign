@@ -11,6 +11,7 @@ X509_IMA_NICKNAME="ima"
 X509_DB_NICKNAME="db"
 X509_KEK_NICKNAME="kek"
 X509_PK_NICKNAME="pk"
+SIGN_DIR="/etc/sign"
 SIGN_CONF="/etc/sign/sign.conf"
 SIGN_CONF_LOCAL="/etc/sign/local.conf"
 
@@ -173,6 +174,54 @@ module() {
 	destroypriv
 }
 
+backup_usage='
+  backup <file name>		Backup everything to move to a different machine'
+usage+=$backup_usage
+command+="|backup"
+
+backup() {
+	if [ $# -lt 1 ]; then
+		echo "$backup_usage"
+		exit -1
+	fi
+	init-check
+	pk12util -o $MOK_KERNEL_KEY -n $X509_KERNEL_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -o $MOK_MODULE_KEY -n $X509_MODULE_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -o $DB_KEY -n $X509_DB_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -o $KEK_KEY -n $X509_KEK_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -o $PK_KEY -n $X509_PK_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -o $IMA_CA_KEY -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
+	tar -czf $1 $SIGN_DIR
+}
+
+restore_usage='
+  restore <file name>		Restore everything from a different machine'
+usage+=$restore_usage
+command+="|restore"
+
+restore() {
+	if [ $# -lt 1 ]; then
+		echo "$restore_usage"
+		exit -1
+	fi
+	if [ -f "$MOK_CA_CERT" ]; then
+		echo "Restore failed machine is already setup"
+		exit -1
+	fi
+	tar -xzf $1 -C /
+	pk12util -i $MOK_KERNEL_KEY -n $X509_KERNEL_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -i $MOK_MODULE_KEY -n $X509_MODULE_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -i $DB_KEY -n $X509_DB_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -i $KEK_KEY -n $X509_KEK_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -i $PK_KEY -n $X509_PK_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -i $IMA_CA_KEY -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
+	rm -f $MOK_KERNEL_KEY $MOK_MODULE_KEY $DB_KEY $KEK_KEY $PK_KEY $IMA_CA_KEY
+	mokutil --import $MOK_MODULE_CERT $MOK_KERNEL_CERT $MOK_CA_CERT $TEST_CERT --root-pw
+	echo "****************************************************************************"
+	echo "* REBOOT MACHINE AND ENROLL NEW MOK KEYS (use root password in mokmanager) *"
+	echo "****************************************************************************"
+}
+
 kernel_usage='
   kernel <kernal name>		Sign the kernel with the kernel key '
 usage+=$kernel_usage
@@ -214,7 +263,7 @@ case "$command" in
 		echo "$usage"
 		exit 0
 		;;
-	init-setup|destroy-setup|module|kernel|ima|bootloader)
+	init-setup|destroy-setup|backup|restore|module|kernel|ima|bootloader)
 		$command "$@"
 		;;
 	*)
