@@ -177,7 +177,7 @@ module() {
 backup_usage='
   backup <file name>		Backup everything to move to a different machine'
 usage+=$backup_usage
-command+="|backup"
+commands+="|backup"
 
 backup() {
 	if [ $# -lt 1 ]; then
@@ -197,7 +197,7 @@ backup() {
 restore_usage='
   restore <file name>		Restore everything from a different machine'
 usage+=$restore_usage
-command+="|restore"
+commands+="|restore"
 
 restore() {
 	if [ $# -lt 1 ]; then
