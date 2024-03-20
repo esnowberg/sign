@@ -1,0 +1,140 @@
+.TH SIGN 1 "March 20, 2024"
+.SH NAME
+sign - signing tool for developers
+
+.SH SYNOPSIS
+.B sign <command> [<args>]
+
+.SH DESCRIPTION
+Generic signing tool for developers.  This is \fBNOT for use in production\fR.  All
+private keys are stored in the clear.  This tool is geared towards a developer
+that wants to quickly sign things.
+.PP
+
+.SH SIGN COMMANDS
+.B backup <backup-name>
+.RS
+Backup both the public and private keys to move to a different machine. Don't
+mix backup files between OL8 and OL9.
+.RE
+.PP
+.B bootloader <efiprogram>
+.RS
+PE sign a boot loader.
+.RE
+.PP
+.B destroy-setup
+.RS
+Unenroll all keys and remove them from the machine.  Afterwards
+you must reboot and unenroll them through the MokManager.  When
+rebooting, shim will load the MokManager and ask for a password.
+The password is the same as root. Console access is required for
+this step.
+.RE
+.PP
+.B ima <filename>
+.RS
+IMA sign a file
+.RE
+.PP
+.B init-setup
+.RS
+Create all the keys. Afterwards you must reboot and enroll them
+through the MokManager.  When rebooting, shim will load the
+MokManager and ask for a password.  The password is the same as
+root. Console access is required for this step. If you are doing
+Jenkins builds, the "Oracle Linux Test Certificate" will also be
+enrolled with this step. Only call this once.  If you need to
+start over issue the destroy-setup command first.
+.RE
+.PP
+.B kernel <kernel name>
+.RS
+PE sign a kernel
+.RE
+.PP
+.B module <module name>
+.RS
+Sign a module
+.RE
+.PP
+.B restore <backup-name>
+.RS
+Restore a backup generated from a different machine.  This can
+be used in place of the init-setup command.  Afterwards a reboot
+is required.  Follow the same steps as init-setup to enroll the
+keys within the MokManager.
+.RE
+.PP
+
+.SH CONFIGURATION
+The default key values are located in /etc/sign/sign.conf. To override
+anything in this file, create a custom file called /etc/sign/local.conf
+with the value to be overridden.
+
+.SH IMA KEYS
+The sign program will enroll the IMA CA.  The leaf cert must be loaded
+into the .ima keyring.  The leaf cert is available in
+/etc/sign/x509_ima.der. This could be added to the initram or loaded
+after boot.
+
+.SH PK, KEK, and DB KEYS
+The bootloader command signs the file with a DB key.  This key must be
+added through the UEFI. There is also a KEK and PK key that may be
+enrolled into the UEFI too. These keys are located in /etc/sign and are
+called db.der, kek.der, and pk.der.
+
+.SH EXAMPLE
+Use the sign program for local mainline builds.  Where the local build
+is done on one machine and the built kernel is tested on another.
+.PP
+On the development machine:
+.PP
+.RS
+.nf
+sign init-setup
+reboot and follow the MokManager prompts to enroll keys
+.fi
+.RE
+.PP
+Aftewards do a backup on the development machine:
+.PP
+.RS
+.nf
+sign backup devkeys
+Move the "devkeys" backup to the test machine
+.fi
+.RE
+.PP
+On the test machine:
+.PP
+.RS
+.nf
+sign restore devkeys
+reboot and follow the MokManager prompts to enroll keys
+.fi
+.RE
+.PP
+Within your mainline kernel source code find the
+scripts/packages/kernel.spec file.  Locate the line where the kernel is
+being copied.  Add a line to pesign the kernel using -c kernel and then
+overwrite it.  For example:
+.PP
+.RS
+.nf
+--- a/scripts/package/kernel.spec
++++ b/scripts/package/kernel.spec
+@@ -57,6 +57,8 @@ patch -p1 < %{SOURCE2}
+%install
+mkdir -p %{buildroot}/lib/modules/%{KERNELRELEASE}
+cp $(%{make} %{makeflags} -s image_name) %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz
++pesign -s -c kernel -i %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz -o %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz.signed
++mv %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz.signed %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz
+%{make} %{makeflags} INSTALL_MOD_PATH=%{buildroot} modules_install
+%{make} %{makeflags} INSTALL_HDR_PATH=%{buildroot}/usr headers_install
+cp System.map %{buildroot}/lib/modules/%{KERNELRELEASE}
+.fi
+.RE
+.PP
+Now the kernel will be signed with the key contained on the test
+machine.  All future builds will also be properly signed.
