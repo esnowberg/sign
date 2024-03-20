@@ -11,7 +11,7 @@ X509_IMA_NICKNAME="ima"
 X509_DB_NICKNAME="db"
 X509_KEK_NICKNAME="kek"
 X509_PK_NICKNAME="pk"
-SIGN_DIR="/etc/sign"
+SIGN_DIR="etc/sign"
 SIGN_CONF="/etc/sign/sign.conf"
 SIGN_CONF_LOCAL="/etc/sign/local.conf"
 
@@ -191,7 +191,7 @@ backup() {
 	pk12util -o $KEK_KEY -n $X509_KEK_NICKNAME -d $NSSDIR -W "12345678"
 	pk12util -o $PK_KEY -n $X509_PK_NICKNAME -d $NSSDIR -W "12345678"
 	pk12util -o $IMA_CA_KEY -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
-	tar -czf $1 $SIGN_DIR
+	tar -czf $1 -C / $SIGN_DIR/
 }
 
 restore_usage='
