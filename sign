@@ -16,6 +16,7 @@ SIGN_CONF="/etc/sign/sign.conf"
 SIGN_CONF_LOCAL="/etc/sign/local.conf"
 
 if [[ -s $SIGN_CONF ]]; then
+	# shellcheck source=./sign.conf
 	. "$SIGN_CONF"
 else
 	echo "Unable to find sign config file" 1>&2
@@ -23,6 +24,7 @@ else
 fi
 
 if [[ -s $SIGN_CONF_LOCAL ]]; then
+	# shellcheck source=./local.conf
 	. "$SIGN_CONF_LOCAL"
 fi
 
@@ -39,16 +41,16 @@ init-ima() {
 
 	trap 'rm -f -- "$TMPCSR" "$TMPCA" "$TMPCAPEM"' EXIT
 
-	openssl req -new  -nodes -utf8 -sha512 -out $TMPCSR -keyout $IMA_PRIV_KEY \
+	openssl req -new  -nodes -utf8 -sha512 -out "$TMPCSR" -keyout "$IMA_PRIV_KEY" \
 		-subj '/'"$X509_IMA_COMMON_NAME" -config <( \
 		printf "[cert]\n%s\n[req]\ndistinguished_name =  \
 		cert\ndefault_bits = 4096\n" "$X509_IMA_COMMON_NAME")
 
-	pk12util -o $TMPCA -n $X509_CA_NICKNAME -d $NSSDIR -W "12345678"
-	openssl pkcs12 -in $TMPCA -out $TMPCAPEM -nodes -passin pass:12345678
+	pk12util -o "$TMPCA" -n $X509_CA_NICKNAME -d "$NSSDIR" -W "12345678"
+	openssl pkcs12 -in "$TMPCA" -out "$TMPCAPEM" -nodes -passin pass:12345678
 
-	openssl x509 -req -in $TMPCSR -days 3650 -CA $TMPCAPEM -CAkey $TMPCAPEM \
-		-CAcreateserial -outform DER -out $IMA_CERT  -extensions EXT \
+	openssl x509 -req -in "$TMPCSR" -days 3650 -CA "$TMPCAPEM" -CAkey "$TMPCAPEM" \
+		-CAcreateserial -outform DER -out "$IMA_CERT"  -extensions EXT \
 		-extfile <( \
 		printf "[EXT]\nkeyUsage=digitalSignature\n\
 		extendedKeyUsage=codeSigning\nsubjectKeyIdentifier=hash\n\
@@ -65,39 +67,39 @@ init-setup() {
 		exit 1
 	fi
 
-	efikeygen -d $NSSDIR -C -n $X509_CA_NICKNAME -S  \
+	efikeygen -d "$NSSDIR" -C -n $X509_CA_NICKNAME -S  \
 			--common-name="""$X509_CA_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
-	efikeygen -d $NSSDIR -n $X509_KERNEL_NICKNAME --signer $X509_CA_NICKNAME -k \
+	efikeygen -d "$NSSDIR" -n $X509_KERNEL_NICKNAME --signer $X509_CA_NICKNAME -k \
 			--common-name="""$X509_KERNEL_COMMON_NAME"""
 
-	efikeygen -d $NSSDIR -n $X509_IMA_NICKNAME --signer $X509_CA_NICKNAME -k \
+	efikeygen -d "$NSSDIR" -n $X509_IMA_NICKNAME --signer $X509_CA_NICKNAME -k \
 			--common-name="""$X509_IMA_COMMON_NAME"""
 
-	efikeygen -d $NSSDIR -n $X509_MODULE_NICKNAME --signer $X509_CA_NICKNAME -m \
+	efikeygen -d "$NSSDIR" -n $X509_MODULE_NICKNAME --signer $X509_CA_NICKNAME -m \
 			--common-name="""$X509_MODULE_COMMON_NAME"""
 
-	efikeygen -d $NSSDIR -C -n $X509_DB_NICKNAME -S \
+	efikeygen -d "$NSSDIR" -C -n $X509_DB_NICKNAME -S \
 			--common-name="""$X509_DB_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
-	efikeygen -d $NSSDIR -C -n $X509_KEK_NICKNAME -S \
+	efikeygen -d "$NSSDIR" -C -n $X509_KEK_NICKNAME -S \
 			--common-name="""$X509_KEK_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
-	efikeygen -d $NSSDIR -C -n $X509_PK_NICKNAME -S \
+	efikeygen -d "$NSSDIR" -C -n $X509_PK_NICKNAME -S \
 			--common-name="""$X509_PK_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
-	certutil -L -d $NSSDIR -n $X509_KERNEL_NICKNAME -o $MOK_KERNEL_CERT -r
-	certutil -L -d $NSSDIR -n $X509_MODULE_NICKNAME -o $MOK_MODULE_CERT -r
-	certutil -L -d $NSSDIR -n $X509_IMA_NICKNAME -o $IMA_CERT -r
-	certutil -L -d $NSSDIR -n $X509_DB_NICKNAME -o $DB_CERT -r
-	certutil -L -d $NSSDIR -n $X509_KEK_NICKNAME -o $KEK_CERT -r
-	certutil -L -d $NSSDIR -n $X509_PK_NICKNAME -o $PK_CERT -r
-	certutil -L -d $NSSDIR -n $X509_CA_NICKNAME -o $MOK_CA_CERT -r
-	certutil -L -d $NSSDIR_OL -n """$X509_TEST_NICKNAME""" -o $TEST_CERT -r
+	certutil -L -d "$NSSDIR" -n $X509_KERNEL_NICKNAME -o "$MOK_KERNEL_CERT" -r
+	certutil -L -d "$NSSDIR" -n $X509_MODULE_NICKNAME -o "$MOK_MODULE_CERT" -r
+	certutil -L -d "$NSSDIR" -n $X509_IMA_NICKNAME -o "$IMA_CERT" -r
+	certutil -L -d "$NSSDIR" -n $X509_DB_NICKNAME -o "$DB_CERT" -r
+	certutil -L -d "$NSSDIR" -n $X509_KEK_NICKNAME -o "$KEK_CERT" -r
+	certutil -L -d "$NSSDIR" -n $X509_PK_NICKNAME -o "$PK_CERT" -r
+	certutil -L -d "$NSSDIR" -n $X509_CA_NICKNAME -o "$MOK_CA_CERT" -r
+	certutil -L -d "$NSSDIR_OL" -n """$X509_TEST_NICKNAME""" -o "$TEST_CERT" -r
 
 	init-ima
 
-	mokutil --import $MOK_MODULE_CERT $MOK_KERNEL_CERT $MOK_CA_CERT $TEST_CERT --root-pw
+	mokutil --import "$MOK_MODULE_CERT" "$MOK_KERNEL_CERT" "$MOK_CA_CERT" "$TEST_CERT" --root-pw
 	echo "****************************************************************************"
 	echo "* REBOOT MACHINE AND ENROLL NEW MOK KEYS (use root password in mokmanager) *"
 	echo "****************************************************************************"
@@ -106,7 +108,7 @@ init-setup() {
 init-check() {
 	if [ ! -f "$MOK_CA_CERT" ]; then
 		echo "Uninitialized call init-setup first"
-		exit -1
+		exit 1
 	fi
 }
 
@@ -117,22 +119,22 @@ commands+="|destroy-setup"
 
 destroy-setup() {
 	init-check
-	certutil -d $NSSDIR -D -n $X509_CA_NICKNAME
-	certutil -d $NSSDIR -D -n $X509_KERNEL_NICKNAME
-	certutil -d $NSSDIR -D -n $X509_MODULE_NICKNAME
-	certutil -d $NSSDIR -D -n $X509_IMA_NICKNAME
-	certutil -d $NSSDIR -D -n $X509_DB_NICKNAME
-	certutil -d $NSSDIR -D -n $X509_KEK_NICKNAME
-	certutil -d $NSSDIR -D -n $X509_PK_NICKNAME
-	mokutil --delete $MOK_CA_CERT $MOK_KERNEL_CERT $MOK_MODULE_CERT $TEST_CERT --root-pw
-	rm -f $MOK_KERNEL_CERT
-	rm -f $MOK_MODULE_CERT
-	rm -f $IMA_CERT
-	rm -f $DB_CERT
-	rm -f $KEK_CERT
-	rm -f $PK_CERT
-	rm -f $MOK_CA_CERT
-	rm -f $TEST_CERT
+	certutil -d "$NSSDIR" -D -n $X509_CA_NICKNAME
+	certutil -d "$NSSDIR" -D -n $X509_KERNEL_NICKNAME
+	certutil -d "$NSSDIR" -D -n $X509_MODULE_NICKNAME
+	certutil -d "$NSSDIR" -D -n $X509_IMA_NICKNAME
+	certutil -d "$NSSDIR" -D -n $X509_DB_NICKNAME
+	certutil -d "$NSSDIR" -D -n $X509_KEK_NICKNAME
+	certutil -d "$NSSDIR" -D -n $X509_PK_NICKNAME
+	mokutil --delete "$MOK_CA_CERT" "$MOK_KERNEL_CERT" "$MOK_MODULE_CERT" "$TEST_CERT" --root-pw
+	rm -f "$MOK_KERNEL_CERT"
+	rm -f "$MOK_MODULE_CERT"
+	rm -f "$IMA_CERT"
+	rm -f "$DB_CERT"
+	rm -f "$KEK_CERT"
+	rm -f "$PK_CERT"
+	rm -f "$MOK_CA_CERT"
+	rm -f "$TEST_CERT"
 	echo "***************************************************************************"
 	echo "* REBOOT MACHINE NOW TO DELETE MOK KEYS (use root password in mokmanager) *"
 	echo "***************************************************************************"
@@ -156,7 +158,7 @@ commands+="|ima"
 
 ima() {
 	init-check
-	evmctl ima_sign --key "$IMA_PRIV_KEY" $1
+	evmctl ima_sign --key "$IMA_PRIV_KEY" "$1"
 }
 
 module_usage='
@@ -167,10 +169,10 @@ commands+="|module"
 module() {
 	init-check
 	setuppriv
-	pk12util -o $TMPP12 -n $X509_MODULE_NICKNAME -d $NSSDIR -W "12345678"
+	pk12util -o "$TMPP12" -n $X509_MODULE_NICKNAME -d "$NSSDIR" -W "12345678"
 	openssl pkcs12 -in "$TMPP12" -out "$TMPPRIV" -nocerts -nodes -passin pass:12345678
-	SIGNFILE=$(echo $SIGN_FILE | cut -f1 -d ' ')
-	$($SIGNFILE sha256 "$TMPPRIV" "$MOK_MODULE_CERT" $1)
+	SFILE=$(echo "$SIGN_FILE" | cut -f1 -d ' ')
+	eval "$($SFILE sha256 "$TMPPRIV" "$MOK_MODULE_CERT" "$1")"
 	destroypriv
 }
 
@@ -182,16 +184,16 @@ commands+="|backup"
 backup() {
 	if [ $# -lt 1 ]; then
 		echo "$backup_usage"
-		exit -1
+		exit 1
 	fi
 	init-check
-	pk12util -o $MOK_KERNEL_KEY -n $X509_KERNEL_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -o $MOK_MODULE_KEY -n $X509_MODULE_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -o $DB_KEY -n $X509_DB_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -o $KEK_KEY -n $X509_KEK_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -o $PK_KEY -n $X509_PK_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -o $IMA_CA_KEY -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
-	tar -czf $1 -C / $SIGN_DIR/
+	pk12util -o "$MOK_KERNEL_KEY" -n $X509_KERNEL_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -o "$MOK_MODULE_KEY" -n $X509_MODULE_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -o "$DB_KEY" -n $X509_DB_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -o "$KEK_KEY" -n $X509_KEK_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -o "$PK_KEY" -n $X509_PK_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -o "$IMA_CA_KEY" -n $X509_IMA_NICKNAME -d "$NSSDIR" -W "12345678"
+	tar -czf "$1" -C / $SIGN_DIR/
 }
 
 restore_usage='
@@ -202,21 +204,21 @@ commands+="|restore"
 restore() {
 	if [ $# -lt 1 ]; then
 		echo "$restore_usage"
-		exit -1
+		exit 1
 	fi
 	if [ -f "$MOK_CA_CERT" ]; then
 		echo "Restore failed machine is already setup"
-		exit -1
+		exit 1
 	fi
-	tar -xzf $1 -C /
-	pk12util -i $MOK_KERNEL_KEY -n $X509_KERNEL_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -i $MOK_MODULE_KEY -n $X509_MODULE_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -i $DB_KEY -n $X509_DB_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -i $KEK_KEY -n $X509_KEK_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -i $PK_KEY -n $X509_PK_NICKNAME -d $NSSDIR -W "12345678"
-	pk12util -i $IMA_CA_KEY -n $X509_IMA_NICKNAME -d $NSSDIR -W "12345678"
-	rm -f $MOK_KERNEL_KEY $MOK_MODULE_KEY $DB_KEY $KEK_KEY $PK_KEY $IMA_CA_KEY
-	mokutil --import $MOK_MODULE_CERT $MOK_KERNEL_CERT $MOK_CA_CERT $TEST_CERT --root-pw
+	tar -xzf "$1" -C /
+	pk12util -i "$MOK_KERNEL_KEY" -n $X509_KERNEL_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -i "$MOK_MODULE_KEY" -n $X509_MODULE_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -i "$DB_KEY" -n $X509_DB_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -i "$KEK_KEY" -n $X509_KEK_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -i "$PK_KEY" -n $X509_PK_NICKNAME -d "$NSSDIR" -W "12345678"
+	pk12util -i "$IMA_CA_KEY" -n $X509_IMA_NICKNAME -d "$NSSDIR" -W "12345678"
+	rm -f "$MOK_KERNEL_KEY" "$MOK_MODULE_KEY" "$DB_KEY" "$KEK_KEY" "$PK_KEY" "$IMA_CA_KEY"
+	mokutil --import "$MOK_MODULE_CERT" "$MOK_KERNEL_CERT" "$MOK_CA_CERT" "$TEST_CERT" --root-pw
 	echo "****************************************************************************"
 	echo "* REBOOT MACHINE AND ENROLL NEW MOK KEYS (use root password in mokmanager) *"
 	echo "****************************************************************************"
@@ -231,8 +233,8 @@ kernel() {
 	init-check
 	TMPKERNEL=$(mktemp -t XXXXXXXX)
 	trap 'rm -f -- "$TMPKERNEL"' EXIT
-	pesign --force -i $1 -o $TMPKERNEL -c $X509_KERNEL_NICKNAME -s
-	mv $TMPKERNEL $1
+	pesign --force -i "$1" -o "$TMPKERNEL" -c $X509_KERNEL_NICKNAME -s
+	mv "$TMPKERNEL" "$1"
 	trap - EXIT
 }
 
@@ -245,8 +247,8 @@ bootloader() {
 	init-check
 	TMPBOOTLOADER=$(mktemp -t XXXXXXXX)
 	trap 'rm -f -- "$TMPBOOTLOADER"' EXIT
-	pesign --force -i $1 -o $TMPBOOTLOADER -c $X509_DB_NICKNAME -s
-	mv $TMPBOOTLOADER $1
+	pesign --force -i "$1" -o "$TMPBOOTLOADER" -c $X509_DB_NICKNAME -s
+	mv "$TMPBOOTLOADER" "$1"
 	trap - EXIT
 }
 
