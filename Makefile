@@ -6,9 +6,9 @@ el8:
 	rpmdev-setuptree
 	mkdir -p $(BUILDDIR)
 	cp -f sign.conf $(BUILDDIR)
+	cat sign-ol8.conf >> $(BUILDDIR)/sign.conf
 	cp -f sign $(BUILDDIR)
 	gzip -c sign.1 > $(BUILDDIR)/sign.1.gz
-	patch $(BUILDDIR)/sign 0001-Hack-to-work-around-efikeygen-bug-in-OL8.patch
 	tar --create --file ~/rpmbuild/SOURCES/$(BUILDDIR).tar.gz $(BUILDDIR)
 	rm -rf $(BUILDDIR)
 	cp sign.spec ~/rpmbuild/SPECS
@@ -18,6 +18,7 @@ el9:
 	rpmdev-setuptree
 	mkdir -p $(BUILDDIR)
 	cp -f sign.conf $(BUILDDIR)
+	cat sign-ol9.conf >> $(BUILDDIR)/sign.conf
 	cp -f sign $(BUILDDIR)
 	gzip -c sign.1 > $(BUILDDIR)/sign.1.gz
 	tar --create --file ~/rpmbuild/SOURCES/$(BUILDDIR).tar.gz $(BUILDDIR)

@@ -66,7 +66,7 @@ init-setup() {
 	fi
 
 	efikeygen -d $NSSDIR -C -n $X509_CA_NICKNAME -S  \
-			--common-name="""$X509_CA_COMMON_NAME"""
+			--common-name="""$X509_CA_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
 	efikeygen -d $NSSDIR -n $X509_KERNEL_NICKNAME --signer $X509_CA_NICKNAME -k \
 			--common-name="""$X509_KERNEL_COMMON_NAME"""
@@ -78,13 +78,13 @@ init-setup() {
 			--common-name="""$X509_MODULE_COMMON_NAME"""
 
 	efikeygen -d $NSSDIR -C -n $X509_DB_NICKNAME -S \
-			--common-name="""$X509_DB_COMMON_NAME"""
+			--common-name="""$X509_DB_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
 	efikeygen -d $NSSDIR -C -n $X509_KEK_NICKNAME -S \
-			--common-name="""$X509_KEK_COMMON_NAME"""
+			--common-name="""$X509_KEK_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
 	efikeygen -d $NSSDIR -C -n $X509_PK_NICKNAME -S \
-			--common-name="""$X509_PK_COMMON_NAME"""
+			--common-name="""$X509_PK_COMMON_NAME""" "$EFI_KEYGEN_PARAM"
 
 	certutil -L -d $NSSDIR -n $X509_KERNEL_NICKNAME -o $MOK_KERNEL_CERT -r
 	certutil -L -d $NSSDIR -n $X509_MODULE_NICKNAME -o $MOK_MODULE_CERT -r
