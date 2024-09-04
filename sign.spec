@@ -1,5 +1,5 @@
 Name:           sign
-Version:        0.2
+Version:        0.3
 Release:        1%{?_rel}
 Summary:        Dev signing tools
 BuildArch:      noarch
@@ -44,7 +44,11 @@ rm -rf $RPM_BUILD_ROOT
 /etc/sign/sign.conf
 /usr/share/man/man1/sign.1.gz
 
+%license LICENSE.txt
+
 %changelog
+* Wed Sep 4 2024 Eric Snowberg <eric.snowberg@oracle.com>
+- Add license info
 * Wed Mar 20 2024 Eric Snowberg <eric.snowberg@oracle.com>
 - Add man page
 * Fri Feb 23 2024 Eric Snowberg <eric.snowberg@oracle.com>

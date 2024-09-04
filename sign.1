@@ -112,29 +112,3 @@ On the test machine:
 .nf
 sign restore devkeys
 reboot and follow the MokManager prompts to enroll keys
-.fi
-.RE
-.PP
-Within your mainline kernel source code find the
-scripts/packages/kernel.spec file.  Locate the line where the kernel is
-being copied.  Add a line to pesign the kernel using -c kernel and then
-overwrite it.  For example:
-.PP
-.RS
-.nf
---- a/scripts/package/kernel.spec
-+++ b/scripts/package/kernel.spec
-@@ -57,6 +57,8 @@ patch -p1 < %{SOURCE2}
-%install
-mkdir -p %{buildroot}/lib/modules/%{KERNELRELEASE}
-cp $(%{make} %{makeflags} -s image_name) %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz
-+pesign -s -c kernel -i %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz -o %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz.signed
-+mv %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz.signed %{buildroot}/lib/modules/%{KERNELRELEASE}/vmlinuz
-%{make} %{makeflags} INSTALL_MOD_PATH=%{buildroot} modules_install
-%{make} %{makeflags} INSTALL_HDR_PATH=%{buildroot}/usr headers_install
-cp System.map %{buildroot}/lib/modules/%{KERNELRELEASE}
-.fi
-.RE
-.PP
-Now the kernel will be signed with the key contained on the test
-machine.  All future builds will also be properly signed.

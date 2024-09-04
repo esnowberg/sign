@@ -1,4 +1,4 @@
-BUILDDIR=sign-0.2
+BUILDDIR=sign-0.3
 
 all: el8 el9
 
@@ -8,6 +8,7 @@ el8:
 	cp -f sign.conf $(BUILDDIR)
 	cat sign-ol8.conf >> $(BUILDDIR)/sign.conf
 	cp -f sign $(BUILDDIR)
+	cp -f LICENSE.txt $(BUILDDIR)
 	gzip -c sign.1 > $(BUILDDIR)/sign.1.gz
 	tar --create --file ~/rpmbuild/SOURCES/$(BUILDDIR).tar.gz $(BUILDDIR)
 	rm -rf $(BUILDDIR)
@@ -20,6 +21,7 @@ el9:
 	cp -f sign.conf $(BUILDDIR)
 	cat sign-ol9.conf >> $(BUILDDIR)/sign.conf
 	cp -f sign $(BUILDDIR)
+	cp -f LICENSE.txt $(BUILDDIR)
 	gzip -c sign.1 > $(BUILDDIR)/sign.1.gz
 	tar --create --file ~/rpmbuild/SOURCES/$(BUILDDIR).tar.gz $(BUILDDIR)
 	rm -rf $(BUILDDIR)
