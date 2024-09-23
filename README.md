@@ -135,10 +135,10 @@ Copyright (c) 2024 Oracle and/or its affiliates.
 
 This software is available to you under
 
-SPDX-License-Identifier: GPL-2.0
+SPDX-License-Identifier: GPL-2.0-or-later
 
-Being under the terms of the GNU General Public License version 2.
+Being under the terms of the GNU General Public License version 2 or later.
 
-SPDX-URL: https://spdx.org/licenses/GPL-2.0.html
+SPDX-URL: https://spdx.org/licenses/GPL-2.0-or-later.html
 
 See [the license file](./LICENSE.txt) for more details.

@@ -5,7 +5,7 @@ Summary:        Dev signing tools
 BuildArch:      noarch
 Packager:	Eric Snowberg <eric.snowberg@oracle.com>
 
-License:        GPLv2
+License:        GPLv2+
 Source0:        %{name}-%{version}.tar.gz
 
 Requires:       pesign
