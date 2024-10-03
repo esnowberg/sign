@@ -1038,7 +1038,7 @@ the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <http://www.gnu.org/philosophy/why-not-lgpl.html>.
 -------------------------------------------------------------------------------
-openssl is OpenSSL and ALS 2.0 licensed
+openssl is OpenSSL and ASL 2.0 licensed
 -------------------------------------------------------------------------------
 
                                  Apache License
