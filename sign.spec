@@ -20,6 +20,7 @@ Requires:	kernel-headers
 Requires:	ima-evm-utils
 Requires:	openssl
 Requires:	kernel-devel
+Requires:	tar
 
 %description
 Signing Tools for Developers.
@@ -47,6 +48,8 @@ rm -rf $RPM_BUILD_ROOT
 %license LICENSE.txt
 
 %changelog
+* Tue Nov 26 2024 Eric Snowberg <eric.snowberg@oracle.com> - 0.3
+- Add tar dependency
 * Wed Sep 4 2024 Eric Snowberg <eric.snowberg@oracle.com>
 - Add license info
 * Wed Mar 20 2024 Eric Snowberg <eric.snowberg@oracle.com>
