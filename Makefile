@@ -1,4 +1,4 @@
-BUILDDIR=sign-0.3
+BUILDDIR=sign-0.4
 
 all: el8 el9
 
@@ -19,7 +19,6 @@ el9:
 	rpmdev-setuptree
 	mkdir -p $(BUILDDIR)
 	cp -f sign.conf $(BUILDDIR)
-	cat sign-ol9.conf >> $(BUILDDIR)/sign.conf
 	cp -f sign $(BUILDDIR)
 	cp -f LICENSE.txt $(BUILDDIR)
 	gzip -c sign.1 > $(BUILDDIR)/sign.1.gz

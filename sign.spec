@@ -1,5 +1,5 @@
 Name:           sign
-Version:        0.3
+Version:        0.4
 Release:        1%{?_rel}
 Summary:        Dev signing tools
 BuildArch:      noarch
@@ -48,6 +48,8 @@ rm -rf $RPM_BUILD_ROOT
 %license LICENSE.txt
 
 %changelog
+* Thu Dec 12 2024 Eric Snowberg <eric.snowberg@oracle.com> - 0.4
+- Fix init-setup problem that originated from shellcheck change
 * Tue Nov 26 2024 Eric Snowberg <eric.snowberg@oracle.com> - 0.3
 - Add tar dependency
 * Wed Sep 4 2024 Eric Snowberg <eric.snowberg@oracle.com>
