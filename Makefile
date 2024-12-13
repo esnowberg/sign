@@ -1,4 +1,4 @@
-BUILDDIR=sign-0.3
+BUILDDIR=sign-0.4
 
 all: el8 el9
 
